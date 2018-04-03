@@ -41,6 +41,12 @@ struct SyntaxTestStats
 {
 	int successCount;
 	int runCount;
+	SyntaxTestStats &operator+=(SyntaxTestStats const& _rhs)
+	{
+		successCount += _rhs.successCount;
+		runCount += _rhs.runCount;
+		return *this;
+	}
 	operator bool() const { return successCount == runCount; }
 };
 
@@ -301,22 +307,35 @@ Allowed options)",
 		}
 	}
 
-	fs::path syntaxTestPath = testPath / "libsolidity" / "syntaxTests";
+	SyntaxTestStats stats = { 0, 0 };
 
-	if (fs::exists(syntaxTestPath) && fs::is_directory(syntaxTestPath))
+	for (auto const& testSuite : {"syntaxTests", "parserTests"})
 	{
-		auto stats = SyntaxTestTool::processPath(testPath / "libsolidity", "syntaxTests", formatted);
+		fs::path syntaxTestPath = testPath / "libsolidity" / testSuite;
 
-		cout << endl << "Summary: ";
-		FormattedScope(cout, formatted, {BOLD, stats ? GREEN : RED}) <<
-			stats.successCount << "/" << stats.runCount;
-		cout << " tests successful." << endl;
+		if (fs::exists(syntaxTestPath) && fs::is_directory(syntaxTestPath))
+		{
+			cout << "Running " << testSuite << ":" << endl;
+			auto suiteStats = SyntaxTestTool::processPath(testPath / "libsolidity", testSuite, formatted);
 
-		return stats ? 0 : 1;
+			cout << "Summary of " << testSuite << ": ";
+			FormattedScope(cout, formatted, {BOLD, suiteStats ? GREEN : RED}) <<
+				suiteStats.successCount << "/" << suiteStats.runCount;
+			cout << " tests successful." << endl << endl;
+
+			stats += suiteStats;
+		}
+		else
+		{
+			cerr << "Test path not found. Use the --testpath argument." << endl;
+			return 1;
+		}
 	}
-	else
-	{
-		cerr << "Test path not found. Use the --testpath argument." << endl;
-		return 1;
-	}
+
+	cout << "Summary: ";
+	FormattedScope(cout, formatted, {BOLD, stats ? GREEN : RED}) <<
+		stats.successCount << "/" << stats.runCount;
+	cout << " tests successful." << endl;
+
+	return stats ? 1 : 0;
 }

@@ -56,12 +56,15 @@ test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
 	master_test_suite_t& master = framework::master_test_suite();
 	master.p_name.value = "SolidityTests";
 	dev::test::Options::get().validate();
-	solAssert(dev::solidity::test::SyntaxTest::registerTests(
-		master,
-		dev::test::Options::get().testPath / "libsolidity",
-		"syntaxTests",
-		dev::test::Options::get().evmVersion()
-	) > 0, "no syntax tests found");
+	for (auto const& testSuite : {"syntaxTests", "parserTests"})
+	{
+		solAssert(dev::solidity::test::SyntaxTest::registerTests(
+			master,
+			dev::test::Options::get().testPath / "libsolidity",
+			testSuite,
+			dev::test::Options::get().evmVersion()
+		) > 0, std::string(testSuite) + " not found");
+	}
 	if (dev::test::Options::get().disableIPC)
 	{
 		for (auto suite: {
